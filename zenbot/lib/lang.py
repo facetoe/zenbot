@@ -26,6 +26,8 @@ class ZenbotGrammar(object):
         status = oneOf("new open pending hold solved closed", caseless=True).setResultsName('status')
         priority = oneOf('low normal high urgent', caseless=True).setResultsName('priority')
         created = oneOf('created', caseless=True).setResultsName('created')
+        updated = oneOf('updated', caseless=True).setResultsName('updated')
+
 
         count = oneOf("count", caseless=True).setResultsName('count')
         show = oneOf("show", caseless=True).setResultsName('show')
@@ -43,6 +45,7 @@ class ZenbotGrammar(object):
         status_extra = Optional(specifier + Word('status') + Optional(comparison) + status)
         tags_extra = Optional(specifier + tags + Regex(r'(?P<tag_value>\*?\w+\*?)'))
         created_extra = Optional(Optional(specifier) + created + Optional(time_comparison) + Optional(dayTimeSpec))
+        updated_extra = Optional(Optional(specifier) + updated + Optional(time_comparison) + Optional(dayTimeSpec))
         person_extra = Optional(user_specifier + person_name)
 
         ticket = Regex(r'#(?P<ticket_id>\d+)').setResultsName('ticket')
@@ -67,6 +70,7 @@ class ZenbotGrammar(object):
                               tags_extra +
                               status_extra +
                               created_extra +
+                                updated_extra +
                               person_extra) +
                          LineEnd())
 
@@ -91,7 +95,7 @@ if __name__ == '__main__':
     api_credentials = json.load(open('/home/facetoe/zendeskapi_creds.json', 'r'))
     api = Zenpy(api_credentials['domain'], api_credentials['email'], api_credentials['token'])
     grammar = ZenbotGrammar(".zenbot").get_grammar()
-    result = grammar.parseString(".zenbot count tickets created yesterday ")
+    result = grammar.parseString(".zenbot count tickets updated today")
     print(result[0](api))
 
 

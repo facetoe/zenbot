@@ -102,19 +102,26 @@ class CountTickets(Command):
             format_str += join_word + " %s %%(status)s" % " ".join(key.split('_'))
             join_word = ' and'
 
-        if tokens.created:
+        if tokens.created or tokens.updated:
             if 'calculatedTime' in tokens:
+                if tokens.created:
+                    search_key = 'created'
+                elif tokens.updated:
+                    search_key = 'updated'
+                else:
+                    raise Exception("BAD THING HAP")
+
                 api_time = tokens.calculatedTime.strftime("%Y-%m-%d")
                 if tokens.before:
-                    key = "created_before"
-                    search_params.update({'created_before': api_time})
+                    key = search_key + '_before'
+                    search_params.update({key: api_time})
 
                 elif tokens.after:
-                    key = 'created_after'
-                    search_params.update({'created_after': api_time})
+                    key = search_key + '_after'
+                    search_params.update({key: api_time})
                 else:
-                    key = 'created'
-                    search_params.update({'created': api_time})
+                    key = search_key
+                    search_params.update({key: api_time})
 
                 if 'with' in join_word:
                     format_str += " %s %%(calculatedTime)s" % " ".join(key.split('_'))
