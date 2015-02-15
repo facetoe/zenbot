@@ -4,7 +4,7 @@ import time
 import sys
 import requests
 
-from zenbot.lib.lang import ZenbotGrammar
+from lib.lang import ZenbotGrammar
 from zenpy import log as logger
 from optparse import OptionParser
 from pyparsing import ParseException
