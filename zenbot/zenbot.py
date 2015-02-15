@@ -4,8 +4,8 @@ import time
 import sys
 import requests
 
-from lang import ZenbotGrammar
-from zenpy import  log as logger
+from zenbot.lib.lang import ZenbotGrammar
+from zenpy import log as logger
 from optparse import OptionParser
 from pyparsing import ParseException
 from twisted.words.protocols import irc
