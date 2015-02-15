@@ -142,8 +142,12 @@ if __name__ == '__main__':
                       help="Email for Zendesk user", metavar="EMAIL")
     parser.add_option("-t", "--token", dest="token",
                       help="API token", metavar="TOKEN")
+    parser.add_option("-s", "--server", dest="server",
+                      help="Server for bot to connect to", metavar="SERVER")
     parser.add_option("-c", "--channel", dest="channel",
                       help="Channel for bot to join", metavar="CHANNEL")
+    parser.add_option("-p", "--port", dest="port", default=6667,
+                      help="Port to connect to", metavar="PORT")
 
     (options, args) = parser.parse_args()
 
@@ -156,7 +160,7 @@ if __name__ == '__main__':
     f = ZenBotFactory(options.channel, options.domain, options.email, options.token)
 
     # connect factory to this host and port
-    reactor.connectTCP("test.irc", 6667, f)
+    reactor.connectTCP(options.server, options.port, f)
 
     # run bot
     reactor.run()
