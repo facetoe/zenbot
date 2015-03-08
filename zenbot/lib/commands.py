@@ -34,24 +34,25 @@ class ShowTicket(Command):
         ticket_attributes = set(list(tokens.pop('ticket_attributes', [])) + ['subject'])
 
         result = api.tickets(**tokens)
-        if result.count == 1:
-            format_params = dict()
-            format_str = ""
-            ticket = result.item()
-            for attr in ticket_attributes:
-                format_str += "%s: [%%(%s)s] " % (attr.capitalize(), attr)
-                format_params.update({attr: getattr(ticket, attr)})
+        if not result:
+            return "No Result"
 
-            format_params['url'] = "https://seqta.zendesk.com/agent/tickets/" + tokens.id
-            format_str += ' - %(url)s'
-            print(format_str)
-            return format_str % self.convert_datetimes(format_params)
+        format_params = dict()
+        format_str = ""
+        ticket = result.one()
+        for attr in ticket_attributes:
+            format_str += "%s: [%%(%s)s] " % (attr.capitalize(), attr)
+            format_params.update({attr: getattr(ticket, attr)})
 
-        return ""
+        format_params['url'] = "https://seqta.zendesk.com/agent/tickets/" + tokens.id
+        format_str += ' - %(url)s'
+        print(format_str)
+        return format_str % self.convert_datetimes(format_params)
+
 
     @staticmethod
     def get_help():
-        return "usage: .zenbot show ID [via|updated_at|submitter|assignee|id|subject|collaborators|priority|type|status|description|tags|forum_topic|organization|requester|recipient|problem|due_at|created_at|raw_subject|url|has_incidents|group|external]"
+        return "usage: .zenbot show TICKET_ID [via|updated_at|submitter|assignee|id|subject|collaborators|priority|type|status|description|tags|forum_topic|organization|requester|recipient|problem|due_at|created_at|raw_subject|url|has_incidents|group|external]"
 
 
 class HelpCommand(Command):

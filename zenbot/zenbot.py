@@ -161,6 +161,5 @@ if __name__ == '__main__':
         f = ZenBotFactory(channel, options.domain, options.email, options.token)
         reactor.connectTCP(options.server, options.port, f)
 
-
-# run bot
+    # run bot
     reactor.run()
