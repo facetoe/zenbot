@@ -74,7 +74,7 @@ class ZenBot(irc.IRCClient):
             return
 
     def get_error(self, user):
-        url = 'http://api.icndb.com/jokes/random?escape=html&firstName=%s' % user.capitalize()
+        url = 'http://api.icndb.com/jokes/random?escape=html&limitTo=[nerdy]'
         response = requests.get(url)
         if response.ok:
             return HTMLParser().unescape(response.json()['value']['joke'])
@@ -144,8 +144,8 @@ if __name__ == '__main__':
                       help="API token", metavar="TOKEN")
     parser.add_option("-s", "--server", dest="server",
                       help="Server for bot to connect to", metavar="SERVER")
-    parser.add_option("-c", "--channel", dest="channel",
-                      help="Channel for bot to join", metavar="CHANNEL")
+    parser.add_option("-c", "--channels", dest="channels",
+                      help="Comma seperated list of channels for the bot to join", metavar="CHANNELS")
     parser.add_option("-p", "--port", dest="port", default=6667,
                       help="Port to connect to", metavar="PORT")
 
@@ -157,10 +157,10 @@ if __name__ == '__main__':
             sys.exit()
 
     # create factory protocol and application
-    f = ZenBotFactory(options.channel, options.domain, options.email, options.token)
+    for channel in options.channels.split(','):
+        f = ZenBotFactory(channel, options.domain, options.email, options.token)
+        reactor.connectTCP(options.server, options.port, f)
 
-    # connect factory to this host and port
-    reactor.connectTCP(options.server, options.port, f)
 
-    # run bot
+# run bot
     reactor.run()
