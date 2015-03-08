@@ -1,12 +1,25 @@
+from datetime import datetime
+
 
 class Command(object):
     tokens = None
+
+    @staticmethod
+    def convert_datetimes(format_params):
+        for param, value in format_params.iteritems():
+            if isinstance(value, datetime):
+                format_params[param] = value.strftime("%I:%M %p - %a %m %b %Y")
+        return format_params
 
     def __init__(self, tokens):
         self.tokens = tokens
 
     def _do_command(self, api):
         pass
+
+    @staticmethod
+    def get_help():
+        raise NotImplementedError("Implement Help")
 
     def __call__(self, api):
         return str(self._do_command(api))
@@ -18,18 +31,51 @@ class ShowTicket(Command):
 
     def _do_command(self, api):
         tokens = self.tokens
+        ticket_attributes = set(list(tokens.pop('ticket_attributes', [])) + ['subject'])
 
-        ticket = api.tickets(id=tokens.ticket_id).item()
-        format_params = dict()
-        format_str = ""
-        for attr in tokens.ticket_attribute:
-            format_str += "%s: [%%(%s)s] " % (attr.capitalize(), attr)
-            format_params.update({attr: getattr(ticket, attr)})
+        result = api.tickets(**tokens)
+        if result.count == 1:
+            format_params = dict()
+            format_str = ""
+            ticket = result.item()
+            for attr in ticket_attributes:
+                format_str += "%s: [%%(%s)s] " % (attr.capitalize(), attr)
+                format_params.update({attr: getattr(ticket, attr)})
 
-        format_params['url'] = "https://seqta.zendesk.com/agent/tickets/" + tokens.ticket_id
-        format_str += ' %(url)s'
-        print(format_str)
-        return format_str % format_params
+            format_params['url'] = "https://seqta.zendesk.com/agent/tickets/" + tokens.id
+            format_str += ' - %(url)s'
+            print(format_str)
+            return format_str % self.convert_datetimes(format_params)
+
+        return ""
+
+    @staticmethod
+    def get_help():
+        return "usage: .zenbot show ID [via|updated_at|submitter|assignee|id|subject|collaborators|priority|type|status|description|tags|forum_topic|organization|requester|recipient|problem|due_at|created_at|raw_subject|url|has_incidents|group|external]"
+
+
+class HelpCommand(Command):
+    def __init__(self, tokens):
+        Command.__init__(self, tokens=tokens)
+
+    def _do_command(self, api):
+        commands = {
+            'show': ShowTicket,
+            'help': self,
+        }
+
+        for token in self.tokens:
+            if token in commands:
+                return commands[token].get_help()
+
+        return "usage: .zenbot help [%s]" % "|".join(sorted(commands.keys()))
+
+    @staticmethod
+    def get_help():
+        return "Yo dog..."
+
+    def __call__(self, api):
+        return self._do_command(None)
 
 
 class ShowUser(Command):
@@ -60,6 +106,10 @@ class ShowUser(Command):
 
         return format_str % format_params
 
+    @staticmethod
+    def get_help():
+        return 'omg'
+
 
 class CountTickets(Command):
     def __init__(self, tokens):
@@ -67,75 +117,13 @@ class CountTickets(Command):
 
     def _do_command(self, api):
         tokens = self.tokens
-        format_str = "%(count)s tickets"
-        print(tokens.keys())
-        if len(tokens.keys()) == 2:
-            if tokens.count and tokens.item == 'tickets':
-                result = api.tickets()
-                return format_str % {'count': result.count}
-
-        if not isinstance(tokens.assignee, basestring):
-            tokens['assignee'] = " ".join([n.capitalize() for n in tokens.assignee])
-        elif tokens.assignee:
-            tokens['assignee'] = tokens['assignee'].capitalize()
-
+        format_str = "%s"
         search_params = dict()
-        join_word = ' with'
-        if tokens.priority:
-            search_params.update({'priority': tokens.priority})
-            format_str += join_word + " %(priority)s priority"
-            join_word = ' and'
+        for key in tokens.keys():
+            if key in ('updated', 'updated_before', 'updated_after'):
+                search_params[key] = tokens.calculatedTime.strftime("%Y-%m-%d")
 
-        if tokens.tags:
-            search_params.update({'tags': tokens.tag_value})
-            format_str += join_word + " %(tags)s %(tag_value)s"
-            join_word = ' and'
-
-        if tokens.status:
-            if tokens.greater_than:
-                key = 'status_greater_than'
-            elif tokens.less_than:
-                key = 'status_less_than'
-            else:
-                key = 'status'
-            search_params.update({key: tokens.status})
-            format_str += join_word + " %s %%(status)s" % " ".join(key.split('_'))
-            join_word = ' and'
-
-        if tokens.created or tokens.updated:
-            if 'calculatedTime' in tokens:
-                if tokens.created:
-                    search_key = 'created'
-                elif tokens.updated:
-                    search_key = 'updated'
-                else:
-                    raise Exception("BAD THING HAP")
-
-                api_time = tokens.calculatedTime.strftime("%Y-%m-%d")
-                if tokens.before:
-                    key = search_key + '_before'
-                    search_params.update({key: api_time})
-
-                elif tokens.after:
-                    key = search_key + '_after'
-                    search_params.update({key: api_time})
-                else:
-                    key = search_key
-                    search_params.update({key: api_time})
-
-                if 'with' in join_word:
-                    format_str += " %s %%(calculatedTime)s" % " ".join(key.split('_'))
-                else:
-                    format_str += join_word + " %s %%(calculatedTime)s" % " ".join(key.split('_'))
-
-        if tokens.assignee:
-            search_params.update({'assignee': tokens.assignee})
-            format_str += " for %(assignee)s"
-
-        print(search_params)
         result = api.search(**search_params)
-        if tokens.calculatedTime:
-            tokens['calculatedTime'] = tokens.calculatedTime.strftime('%a, %b %Y')
-        tokens['count'] = result.count
-
-        return format_str % tokens
+        print result.count
+        print format_str
+        return format_str % result.count

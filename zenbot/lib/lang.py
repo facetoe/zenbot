@@ -1,8 +1,9 @@
 import json
+from string import digits
 from pyparsing import Word, alphas, Regex, oneOf, Optional, LineEnd, OneOrMore, Each
 import re
 from zenpy import Zenpy
-from commands import ShowTicket, ShowUser, CountTickets
+from commands import ShowTicket, ShowUser, CountTickets, HelpCommand
 from natural_time import nlTimeExpression, dayTimeSpec
 
 
@@ -19,83 +20,40 @@ class ZenbotGrammar(object):
         return cmd_parse_action
 
     def get_grammar(self):
-        bot_name = Word(self.bot_name)
-        person_name = (Word(alphas) + Word(alphas)).setResultsName("assignee") | Word(alphas).setResultsName("assignee")
+        bot_name = Word(self.bot_name).suppress()
 
-        tags = oneOf("tag tags", caseless=True).setResultsName('tags')
-        status = oneOf("new open pending hold solved closed", caseless=True).setResultsName('status')
-        priority = oneOf('low normal high urgent', caseless=True).setResultsName('priority')
-        created = oneOf('created', caseless=True).setResultsName('created')
-        updated = oneOf('updated', caseless=True).setResultsName('updated')
+        show = oneOf('show', caseless=True).suppress()
+        help = oneOf('help', caseless=True).suppress()
 
-
-        count = oneOf("count", caseless=True).setResultsName('count')
-        show = oneOf("show", caseless=True).setResultsName('show')
-
-        item = oneOf('tickets ticket', caseless=True).setResultsName("item")
-        specifier = oneOf('with and', caseless=True)
-        user_specifier = oneOf('for', caseless=True)
-
-        comparison = Word('<').setResultsName('less_than') | Word('>').setResultsName("greater_than")
-
-        time_comparison = ( oneOf("after >").setResultsName("after") | oneOf("before <").setResultsName(
-            'before') + nlTimeExpression).setResultsName("time_comparison")
-
-        priority_extra = Optional(specifier + Each(priority + Word('priority')))
-        status_extra = Optional(specifier + Word('status') + Optional(comparison) + status)
-        tags_extra = Optional(specifier + tags + Regex(r'(?P<tag_value>\*?\w+\*?)'))
-        created_extra = Optional(Optional(specifier) + created + Optional(time_comparison) + Optional(dayTimeSpec))
-        updated_extra = Optional(Optional(specifier) + updated + Optional(time_comparison) + Optional(dayTimeSpec))
-        person_extra = Optional(user_specifier + person_name)
-
-        ticket = Regex(r'#(?P<ticket_id>\d+)').setResultsName('ticket')
-
-        person_attribute = OneOrMore(
-            Regex("email|phone|signature|details|notes|role"), re.IGNORECASE
-        ).setResultsName('person_attribute')
-
+        ticket = Regex(r'#(?P<id>\d+)')
         ticket_attribute = OneOrMore(
             Regex(
-                r"due_at|updated_at|created_at|subject|status|subject|raw_subject|url"
-                r"|assignee|type|priority|description|recipient|requester"
-                r"|submitter|assignee|collaborators",
+                r"via|updated_at|submitter|assignee|id|subject|collaborators|priority|type|"
+                r"status|description|tags|forum_topic|organization|requester|recipient|problem|"
+                r"due_at|created_at|raw_subject|url|has_incidents|group|external",
                 re.IGNORECASE)) \
-            .setResultsName('ticket_attribute')
+            .setResultsName('ticket_attributes')
 
-        count_tickets = (bot_name +
-                         count +
-                         Optional(status) +
-                         item +
-                         Each(priority_extra +
-                              tags_extra +
-                              status_extra +
-                              created_extra +
-                                updated_extra +
-                              person_extra) +
-                         LineEnd())
+        show_ticket_command = bot_name + show + (ticket | Word(digits)('id')) + Optional(ticket_attribute) + LineEnd()
+        show_ticket_command.setParseAction(self.get_command_parse_action(ShowTicket))
 
-        count_tickets.setParseAction(self.get_command_parse_action(CountTickets))
+        ticket_unprompted_command = Optional(OneOrMore(Word(alphas))).suppress() + ticket + Optional(
+            OneOrMore(Word(alphas))).suppress()
+        ticket_unprompted_command.setParseAction(self.get_command_parse_action(ShowTicket))
 
-        show_user_info = bot_name + show + Optional(person_attribute) + user_specifier + person_name + LineEnd()
-        show_user_info.setParseAction(self.get_command_parse_action(ShowUser))
+        help_command = bot_name + help + Optional(Word(alphas))
+        help_command.setParseAction(self.get_command_parse_action(HelpCommand))
 
-        show_ticket = bot_name + show + ticket + Optional(ticket_attribute) + LineEnd()
-        show_ticket.setParseAction(self.get_command_parse_action(ShowTicket))
-
-        show_ticket_unprompted = Optional(OneOrMore(Word(alphas))) + ticket + Optional(OneOrMore(Word(alphas)))
-        show_ticket_unprompted.setParseAction(self.get_command_parse_action(ShowTicket))
-
-        return (count_tickets |
-                show_ticket |
-                show_user_info |
-                show_ticket_unprompted)
+        return (show_ticket_command |
+                help_command |
+                ticket_unprompted_command)
 
 
 if __name__ == '__main__':
     api_credentials = json.load(open('/home/facetoe/zendeskapi_creds.json', 'r'))
     api = Zenpy(api_credentials['domain'], api_credentials['email'], api_credentials['token'])
     grammar = ZenbotGrammar(".zenbot").get_grammar()
-    result = grammar.parseString(".zenbot count tickets updated today")
-    print(result[0](api))
+    result = grammar.parseString(".zenbot show 3223 assignee")
+    print result[0](api)
 
 

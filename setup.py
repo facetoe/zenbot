@@ -4,7 +4,7 @@ from setuptools import setup
 
 setup(name='zenbot',
       version='0.1.0',
-      install_requires=['requests', 'zenpy'],
+      install_requires=['requests', 'zenpy', 'pyparsing', 'twisted'],
       description='IRC bot for getting information from Zendesk',
       url='https://github.com/facetoe/zenbot',
       author='facetoe',

@@ -139,4 +139,11 @@ relTimeSpec = qty("qty") + hourMinuteOrSecond("timeunit") + \
               in_ + qty("qty") + hourMinuteOrSecond("timeunit")
 relTimeSpec.setParseAction(convertToTimedelta, calculateTime)
 
-nlTimeExpression = (absTimeSpec | dayTimeSpec | relTimeSpec)
+def strip_tokens(a,b,tokens):
+    for key in tokens.keys():
+        if not key == 'calculatedTime':
+            del tokens[key]
+    return tokens
+
+nlTimeExpression = (absTimeSpec | dayTimeSpec | relTimeSpec).setParseAction(strip_tokens)
+
