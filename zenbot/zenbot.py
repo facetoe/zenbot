@@ -17,14 +17,14 @@ from zenpy import Zenpy
 class ZenBot(irc.IRCClient):
 
     zendesk = None
-    channel = None
+    channels = None
     grammar = None
     nickname = "zenbot"
 
-    def __init__(self, domain, email, token, channel):
+    def __init__(self, domain, email, token, channels):
             self.zendesk = self.zendesk = Zenpy(domain, email, token)
             self.grammar = ZenbotGrammar('.' + self.nickname).get_grammar()
-            self.channel = channel
+            self.channels = channels
 
     def connectionMade(self):
         irc.IRCClient.connectionMade(self)
@@ -39,7 +39,8 @@ class ZenBot(irc.IRCClient):
     def signedOn(self):
         """Called when bot has succesfully signed on to server."""
         logger.info("[Signed on server]")
-        self.join(self.factory.channel)
+        for channel in self.channels:
+            self.join(channel)
 
     def joined(self, channel):
         """This will get called when the bot joins the channel."""
@@ -60,11 +61,11 @@ class ZenBot(irc.IRCClient):
         if msg.startswith(".%s" % self.nickname):
             output = self.parse_message(msg)
             if output:
-                self.say_channel(output)
+                self.say_channel(channel, output)
             else:
-                self.say_channel(self.get_error(user))
+                self.say_channel(channel, self.get_error(user))
         else:
-            self.say_channel(self.parse_message(msg))
+            self.say_channel(channel, self.parse_message(msg))
 
 
         # Check to see if they're sending me a private message
@@ -79,9 +80,9 @@ class ZenBot(irc.IRCClient):
         if response.ok:
             return HTMLParser().unescape(response.json()['value']['joke'])
 
-    def say_channel(self, message):
+    def say_channel(self, channel, message):
         if message:
-            self.say(self.channel, message.encode('utf-8'))
+            self.say(channel, message.encode('utf-8'))
 
 
     def action(self, user, channel, msg):
@@ -113,14 +114,14 @@ class ZenBotFactory(protocol.ClientFactory):
     email = None
     api_token = None
 
-    def __init__(self, channel, domain, email, api_token):
+    def __init__(self, channels, domain, email, api_token):
         self.domain = domain
         self.email = email
         self.api_token = api_token
-        self.channel = channel
+        self.channels = channels
 
     def buildProtocol(self, addr):
-        p = ZenBot(self.domain, self.email, self.api_token, self.channel)
+        p = ZenBot(self.domain, self.email, self.api_token, self.channels)
         p.factory = self
         return p
 
@@ -157,9 +158,8 @@ if __name__ == '__main__':
             sys.exit()
 
     # create factory protocol and application
-    for channel in options.channels.split(','):
-        f = ZenBotFactory(channel, options.domain, options.email, options.token)
-        reactor.connectTCP(options.server, options.port, f)
+    f = ZenBotFactory(options.channels.split(','), options.domain, options.email, options.token)
+    reactor.connectTCP(options.server, options.port, f)
 
     # run bot
     reactor.run()
