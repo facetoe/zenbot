@@ -78,7 +78,7 @@ class ZenBot(irc.IRCClient):
         url = 'http://api.icndb.com/jokes/random?escape=html&limitTo=[nerdy]'
         response = requests.get(url)
         if response.ok:
-            return HTMLParser().unescape(response.json()['value']['joke'])
+            return "%s, %s" % (user, HTMLParser().unescape(response.json()['value']['joke']))
 
     def say_channel(self, channel, message):
         if message:
