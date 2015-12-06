@@ -51,7 +51,7 @@ class ZenbotGrammar(object):
 
 if __name__ == '__main__':
     api_credentials = json.load(open('/home/facetoe/zendeskapi_creds.json', 'r'))
-    api = Zenpy(api_credentials['domain'], api_credentials['email'], api_credentials['token'])
+    api = Zenpy(api_credentials['domain'], api_credentials['email'], api_credentials['token'], debug=True)
     grammar = ZenbotGrammar(".zenbot").get_grammar()
     result = grammar.parseString(".zenbot show 3223 assignee")
     print result[0](api)

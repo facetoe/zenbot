@@ -3,9 +3,10 @@
 import time
 import sys
 import requests
+from zenpy.lib.exception import RecordNotFoundException
 
 from lib.lang import ZenbotGrammar
-from zenpy import log as logger
+from zenpy import log as logger, ZenpyException
 from optparse import OptionParser
 from pyparsing import ParseException
 from twisted.words.protocols import irc
@@ -22,7 +23,7 @@ class ZenBot(irc.IRCClient):
     nickname = "zenbot"
 
     def __init__(self, domain, email, token, channels):
-            self.zendesk = self.zendesk = Zenpy(domain, email, token)
+            self.zendesk = self.zendesk = Zenpy(domain, email, token, debug=True)
             self.grammar = ZenbotGrammar('.' + self.nickname).get_grammar()
             self.channels = channels
 
@@ -51,6 +52,8 @@ class ZenBot(irc.IRCClient):
             command_method = self.grammar.parseString(msg)[0]
             return command_method(self.zendesk)
         except ParseException:
+            pass
+        except RecordNotFoundException:
             pass
 
     def privmsg(self, user, channel, msg):

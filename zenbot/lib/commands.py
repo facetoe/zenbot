@@ -33,13 +33,12 @@ class ShowTicket(Command):
         tokens = self.tokens
         ticket_attributes = set(list(tokens.pop('ticket_attributes', [])) + ['subject'])
 
-        result = api.tickets(**tokens)
-        if not result:
+        ticket = api.tickets(**tokens)
+        if not ticket:
             return "No Result"
 
         format_params = dict()
         format_str = ""
-        ticket = result.one()
         for attr in ticket_attributes:
             format_str += "%s: [%%(%s)s] " % (attr.capitalize(), attr)
             format_params.update({attr: getattr(ticket, attr)})
