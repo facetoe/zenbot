@@ -31,23 +31,18 @@ class ShowTicket(Command):
 
     def _do_command(self, api):
         tokens = self.tokens
-        ticket_attributes = set(list(tokens.pop('ticket_attributes', [])) + ['subject'])
 
         ticket = api.tickets(**tokens)
         if not ticket:
             return "No Result"
 
         format_params = dict()
-        format_str = ""
-        for attr in ticket_attributes:
-            format_str += "%s: [%%(%s)s] " % (attr.capitalize(), attr)
-            format_params.update({attr: getattr(ticket, attr)})
+        format_str = "[%(subject)s] [%(assignee)s] - %(url)s"
+        format_params.update({'subject': ticket.subject,
+                              'assignee': ticket.assignee.name,
+                              'url' : "https://seqta.zendesk.com/agent/tickets/%s" % ticket.id})
 
-        format_params['url'] = "https://seqta.zendesk.com/agent/tickets/" + tokens.id
-        format_str += ' - %(url)s'
-        print(format_str)
         return format_str % self.convert_datetimes(format_params)
-
 
     @staticmethod
     def get_help():
