@@ -39,7 +39,7 @@ class ShowTicket(Command):
         format_params = dict()
         format_str = "[%(subject)s] [%(assignee)s] - %(url)s"
         format_params.update({'subject': ticket.subject,
-                              'assignee': ticket.assignee.name,
+                              'assignee': ticket.assignee.name if ticket.assignee else "Unassigned",
                               'url' : "https://seqta.zendesk.com/agent/tickets/%s" % ticket.id})
 
         return format_str % self.convert_datetimes(format_params)
