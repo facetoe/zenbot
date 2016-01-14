@@ -25,7 +25,7 @@ class ZenbotGrammar(object):
         show = oneOf('show', caseless=True).suppress()
         help = oneOf('help', caseless=True).suppress()
 
-        ticket = Regex(r'#(?P<id>\d+)')
+        ticket = Regex(r'.*#(?P<id>\d+).*')
         ticket_attribute = OneOrMore(
             Regex(
                 r"via|updated_at|submitter|assignee|id|subject|collaborators|priority|type|"
